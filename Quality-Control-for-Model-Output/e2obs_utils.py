@@ -24,7 +24,7 @@ NLON=720
 ## General definitions : (this should not be changed !)
 Valid_cID=['ecmwf','univu','metfr','nerc','jrc','cnrs','univk','ambio','csiro'] # valid list of model iDs
 Valid_cVER=['wrr0','wrr1','wrr2'] # valid list of experiment name
-Valid_cFREQ=['day','mon']         # valid list of output frquencies
+Valid_cFREQ=['day']               # valid list of output frquencies
 
 
 

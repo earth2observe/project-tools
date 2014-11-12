@@ -226,9 +226,9 @@ def eval_eb(fnames,fgarea,msg=None):
 fgarea='./garea.nc'  
 
 ## Location of netcdf files 
-floc='/scratch/rd/need/tmp/e2obs/g57n/'
+#floc='/scratch/rd/need/tmp/e2obs/g57n/'
 ## or thredds server folder 
-#floc='https://vortices.npm.ac.uk/thredds/dodsC/ECMWFwrr0/'
+floc='https://vortices.npm.ac.uk/thredds/dodsC/ECMWFwrr0/'
 
 cID='ecmwf' # instituion id 
 cVER='wrr0' # version id 
@@ -236,7 +236,7 @@ FOUT='./'   # location for output message files
 
 ## override e2ob default values:
 e2obs.SYEAR=1979 # starting year of simulation
-e2obs.EYEAR=2012 # last year of simulation
+e2obs.EYEAR=1979 # last year of simulation
 e2obs.NLAT=360
 e2obs.NLON=720
 
@@ -269,9 +269,9 @@ for year in range(e2obs.SYEAR,e2obs.EYEAR+1):
   ebmsg = eval_eb(fnames,fgarea,msg=ebmsg)
   
   ## write messages to text files 
-  e2obs.write_msg2txt(dtmsg,FOUT+'dtmsg_%s_%s_%s.txt'%(cID,cVER,cYEAR))
-  e2obs.write_msg2txt(wbmsg,FOUT+'wbmsg_%s_%s_%s.txt'%(cID,cVER,cYEAR))
-  e2obs.write_msg2txt(ebmsg,FOUT+'ebmsg_%s_%s_%s.txt'%(cID,cVER,cYEAR))
+  e2obs.write_msg2txt(dtmsg,'reports/'+FOUT+'dtmsg_%s_%s_%s.txt'%(cID,cVER,cYEAR))
+  e2obs.write_msg2txt(wbmsg,'reports/'+FOUT+'wbmsg_%s_%s_%s.txt'%(cID,cVER,cYEAR))
+  e2obs.write_msg2txt(ebmsg,'reports/'+FOUT+'ebmsg_%s_%s_%s.txt'%(cID,cVER,cYEAR))
 
 
 
