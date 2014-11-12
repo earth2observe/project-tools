@@ -236,7 +236,7 @@ FOUT='./'   # location for output message files
 
 ## override e2ob default values:
 e2obs.SYEAR=1979 # starting year of simulation
-e2obs.EYEAR=1979 # last year of simulation
+e2obs.EYEAR=2012 # last year of simulation
 e2obs.NLAT=360
 e2obs.NLON=720
 
