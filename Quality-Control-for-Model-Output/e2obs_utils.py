@@ -3,30 +3,100 @@
 #  General quality control of e2ob simulations 
 #
 #  Emanuel Dutra, emanuel.dutra@ecmwf.int
-#  v0 August 2014 
+#  v1 November 2014 
 
 ## general modules to load 
 import sys
-import ntpath
-import re
-from netCDF4 import Dataset,date2num,date2index,num2date
-import time
-import datetime
+import os
+from netCDF4 import Dataset,num2date
 import numpy as np
 
 
-## Default values, can be changed by calling scripts
-SYEAR=1979 # starting year of simulation
-EYEAR=2012 # last year of simulation
-NLAT=360
-NLON=720
+## list of allowed identifiers:
+validD={}
+validD['cid']=['ecmwf','univu','metfr','nerc','jrc','cnrs','univk','ambio','csiro']
+validD['cver']=['wrr1','wrr2']
+validD['cdomain']=['glob30','glob06','EUMED30']
+validD['cfreq']=['day','mon','1hr','fix']
+validD['cvar']=['Precip','Evap','Runoff','Rainf','Qs','Qsb','Qrec','Qsm','PotEvap',
+                'ECanop','TVeg','ESoil','EWater','RivOut','Dis','SWnet','LWnet','Qle','Qh',
+                'AvgSurfT','Albedo','LAI','SWE','CanopInt','SWEVeg','SurfStor','WaterTableD',
+                'SnowFrac','SnowDepth','SurfMoist','RootMoist','TotMoist','GroundMoist',
+                'lsm','SurfSoilSat','RootSoilSat','TotSoilSat']
+validD['ystart']=range(1979,2013)
+validD['yend']=range(1979,2013)
+validD['cvar_fix']=['lsm','SurfSoilSat','RootSoilSat','TotSoilSat']
 
-## General definitions : (this should not be changed !)
-Valid_cID=['ecmwf','univu','metfr','nerc','jrc','cnrs','univk','ambio','csiro'] # valid list of model iDs
-Valid_cVER=['wrr0','wrr1','wrr2'] # valid list of experiment name
-Valid_cFREQ=['day']               # valid list of output frquencies
 
+def default_latlon(domain):
+  """
+  Return the default lat,lon for a certain domain
+  
+  Parameters:
+  ----------
+  cdomain: string with the domain info 
 
+  Returns:
+  -------
+  lat,lon : np array,np.array, with the lat,lon
+ 
+  """
+  if domain == "glob30":
+    vLON = np.linspace(-179.75,179.75,720)
+    vLAT = np.linspace(-89.75,89.75,360)
+  else:
+    print domain," lat/lon coordinates not coded in default_latlon!"
+    sys.exit(-1)
+  return vLAT,vLON
+
+def load_nc_var(ffile,cvar,dstart=None,dend=None,tinD=None):
+  """
+  Load netcdf variable to numpy array
+  
+  Parameters:
+  ----------
+  ffile : str, netcdf file name 
+  cvar: str, variable name 
+  dstart,dend (optional) : datetime, start/end time for loading
+  tinD,   indexes of time to load (optional), It overrides dstat/dend option 
+
+  Returns:
+  -------
+  xdata,xtime : np array, with data and xtime with the time 
+ 
+  """
+ 
+  if not os.path.isfile(ffile):
+    print ffile,"\n!! Warning !! File not present !!"
+    print ffile
+    return None,None
+
+  nc = Dataset(ffile,'r')
+  try:
+    xtime = num2date(nc.variables['time'][:],getattr(nc.variables['time'],'units'))
+  except:
+    print ffile,'\n Could not check time information, check time variable and units attributes'
+    nc.close()
+    return None,None
+    
+  if dstart is None:
+    d1 = xtime[0]
+  else:
+    d1 = dstart
+  if dend is None:
+    d2 = xtime[-1]
+  else:
+    d2 = dend
+  tind = np.nonzero((xtime >= d1 ) & (xtime <= d2 ))[0]
+  if tinD is not None:
+    tind = tinD
+  if cvar in nc.variables.keys():
+    xdata = nc.variables[cvar][tind,:]
+  else:
+    print ffile,'\n Could not find variable'
+    return None,None
+    nc.close()
+  return xdata,xtime[tind]
 
 def load_grid_area(fgarea,cvar='cell_area'):
   """
@@ -46,36 +116,29 @@ def load_grid_area(fgarea,cvar='cell_area'):
   nc.close()
   return grid_area
 
-def dim_size(finfo):
+def init_msg():
   """
-  Find the expected netcdf dimensions
+  Initialize a message dictionary 
   
   Parameters:
   ----------
-  finfo  : dictionary containing the file information 
+  none
   
   Returns:
   -------
-  vdims : dictionary containing the expected netcdf dimensions: 
-          nlevs = -1 (any number of soil level)
-          lat   = # latitudes
-          lon   = # longitudes
-          time  = # time stamps (depends if it is a monthly or a daily file 
+  msg : dictionary for the different messages: 
+        Smsg: Status related messages (verbose output of what was done / found) 
+        Dmsg: Data related messages - contain global means of the variables 
+        Wmsg: Warning messages : this should be carefully checked 
+        Emsg: Error messages:  Errors found in the dataset : these should be addressed before the final release. 
   """
-
-  iYEAR=int(finfo['cYEAR'])
-
-  # valid dimension sizes 
-  vdims={}
-  vdims['nlevs']=-1
-  vdims['lat']=NLAT
-  vdims['lon']=NLON
-  if finfo['cFREQ'] == 'mon':
-    vdims['time']=12
-  if finfo['cFREQ'] == 'day':
-    vdims['time']=365 + 1*(np.mod(iYEAR,4)==0)
-  return vdims
-
+  msg={}
+  msg['Smsg']=[]
+  msg['Wmsg']=[]
+  msg['Emsg']=[]
+  msg['Dmsg']=[]
+  return msg 
+  
 def print_msg(msg):
   """
   Prints to screen the messages 
@@ -107,161 +170,94 @@ def write_msg2txt(msg,fout):
       f.write(imsg+"\n")
   f.close()
 
-def init_msg():
-  """
-  Initialize a message dictionary 
-  
-  Parameters:
-  ----------
-  none
-  
-  Returns:
-  -------
-  msg : dictionary for the different messages: 
-        Smsg: Status related messages (verbose output of what was done / found) 
-        Dmsg: Data related messages - contain global means of the variables 
-        Wmsg: Warning messages : this should be carefully checked 
-        Emsg: Error messages:  Errors found in the dataset : these should be addressed before the final release. 
-  """
-  msg={}
-  msg['Smsg']=[]
-  msg['Wmsg']=[]
-  msg['Emsg']=[]
-  msg['Dmsg']=[]
-  return msg 
 
-def gen_file_name(floc,cYEAR,cID,cVER,cFREQ,stop_warning=True):
+class fname:
   """
-  Generate file name 
-  
-  Parameters:
-  ----------
-  floc : str, main folder location with the files 
-  cYEAR: str, character year in the form yyyy
-  cID  : str, institution iD 
-  cVER : str, tag denoting the experiment name 
-  cFREQ : str, frequency tag 
-  stop_warning: logical(optional), if True exist if some error is found default is True
+  General class to manage e2obs file names
 
-  Returns:
-  -------
-  cfile : str, full path for file
+  General attributes:
+
   """
 
-  cfile = None # default return: if file does not exist or some error in the input
-  ## generic checks: 
-  iyear = int(cYEAR)
-  if iyear < SYEAR or iyear > EYEAR:
-    print "WARNING: eobs_utils -> gen_file_name"
-    print "input year must be between %i and %i and was provided: %i"%(SYEAR,EYEAR,iyear)
-  elif cID not in Valid_cID:
-    print "WARNING: eobs_utils -> gen_file_name"
-    print "input institution id (cID) is not valid: %s "%(cID)
-    print "valid values are:",Valid_cID
-  elif cVER not in Valid_cVER:
-    print "WARNING: eobs_utils -> gen_file_name"
-    print "input version (cVER) is not valid: %s "%(cVER)
-    print "valid values are:",Valid_cVER
-  elif cFREQ not in Valid_cFREQ:
-    print "WARNING: eobs_utils -> gen_file_name"
-    print "input output frequency (cFREQ) is not valid: %s "%(cFREQ)
-    print "valid values are:",Valid_cFREQ 
-  else:
-    # maybe we can get a file name ?
-    cfile1 = "%s/%s_%s_%s_%s.nc"%(floc,cID,cVER,cFREQ,cYEAR)
-    #if not ntpath.isfile(cfile1):
-      #print "WARNING: eobs_utils -> gen_file_name"
-      #print "Generated file name is not a file ?: %s "%(cfile1)
-    #else:
-    cfile = cfile1 
+  def __init__(self):
+    self.bstr="e2o"   # default initial tag of each file name 
+    self.cid=None     # intitution id
+    self.cver=None    # experiment name 
+    self.cdomain=None # domain identification
+    self.cfreq=None   # temporal frequency 
+    self.cvar=None    # variable name contained in the file
+    self.ystart=1900  # start year of data 
+    self.yend=1900    # end year of data 
+    self.cdate="%04i-%04i"%(self.ystart,self.yend)
+                      # "YeartStart-YearEnd" information
+    self.fname=None   #  file name 
+    self.fpath=None        # file name including full path
+    self.base="./"    # full path to directoy containing the file 
 
-  if cfile is None:
-    print "WARNING: eobs_utils -> gen_file_name"
-    print "Some error occured, generated file name is None"
-    if stop_warning:
-      sys.exit(-1)
-  return cfile
-  
-def get_info_from_file(cfile):
-  """
-  Get information from file name 
-  
-  Parameters:
-  ----------
-  cfile : str, full path for file (or at least file name)
-  
-  Returns:
-  -------
-  finfo : dictionary with the following keys:
-    floc : str, main folder location with the files 
-    cYEAR: str, character year in the form yyyy
-    cID  : str, institution iD 
-    cVER : str, tag denoting the experiment name 
-    cFREQ : str, frequency tag 
-  """
-  finfo = {}
-  finfo['floc'] = ntpath.dirname(cfile)
-  bname=re.split('_|\.',ntpath.basename(cfile))
-  if len(bname) != 5:
-    print "Error: eobs_utils -> get_file_name"
-    print "File name does not seem correct!",ntpath.basename(cfile)
-    sys.exit(-1)
-  finfo['cID'] = bname[0]
-  finfo['cVER'] = bname[1]
-  finfo['cFREQ'] = bname[2]
-  finfo['cYEAR'] = bname[3]
-  return finfo
-  
-def load_nc_var(ffile,cvar,msg=None,dstart=None,dend=None,tinD=None):
-  """
-  Load netcdf variable to numpy array
-  
-  Parameters:
-  ----------
-  ffile : str, netcdf file name 
-  cvar: str, variable name 
-  dstart,dend (optional) : datetime, start/end time for loading
-  tinD,   indexes of time to load (optional), It overrides dstat/dend option 
+  def attr2fpath(self,base=None,bstr=None,cid=None,cver=None,
+               cdomain=None,cfreq=None,cvar=None,ystart=None,
+               yend=None):
+    """
+    Populate attributes and generate file name from input
 
-  Returns:
-  -------
-  xdata,xtime,msg : np array, with data and xtime with the time 
-  msg         : dictionary with messages 
-  """
-  ctag=ntpath.basename(ffile)+' load var '+cvar 
-  if msg is None:
-    msg = init_msg()
-  msg['Smsg'].append(ctag)
-  #if not ntpath.isfile(ffile):
-    #print " !! Warning !! File not present !!"
-    #msg['Emsg'].append(ctg+"File not present ",ffile)
-    #return None,None,msg
+    Parameters:
+    -----------
+    base='./',bstr="e2o",cid=None,cver=None,cdomain=None,
+                cfreq=None,cvar=None,ystart=None,yend=None
 
-  nc = Dataset(ffile,'r')
-  try:
-    xtime = num2date(nc.variables['time'][:],getattr(nc.variables['time'],'units'))
-  except:
-    msg['Emsg'].append(ctag+' Could not check time information, check time variable and units attributes')
-    nc.close()
-    return None,None,msg 
+    Returns:
+    instance
+    """
     
-  if dstart is None:
-    d1 = xtime[0]
-  else:
-    d1 = dstart
-  if dend is None:
-    d2 = xtime[-1]
-  else:
-    d2 = dend
-  tind = np.nonzero((xtime >= d1 ) & (xtime <= d2 ))[0]
-  if tinD is not None:
-    tind = tinD
-  if cvar in nc.variables.keys():
-    xdata = nc.variables[cvar][tind,:]
-    msg['Smsg'].append(ctag+' Ok with dimensions:'+str(xdata.shape))
-  else:
-    msg['Wmsg'].append(ctag+' Could not find variable, setting to zero!')
-    vdims = (len(nc.dimensions['time']),len(nc.dimensions['lat']),len(nc.dimensions['lon']))
-    xdata = np.zeros(vdims,dtype='f4')
-  nc.close()
-  return xdata,xtime[tind],msg
+    # add attr to instance
+    for att in ['base','bstr','cid','cver','cdomain',
+                 'cfreq','cvar','ystart','yend']:
+      if not eval(att+' is None'):
+        setattr(self,att,eval(att))
+    # derived attributes
+    self.cdate="%04i-%04i"%(self.ystart,self.yend)
+    if self.cfreq == 'fix':
+      self.fname='_'.join([self.bstr,self.cid,self.cver,
+                          self.cdomain,self.cfreq,self.cvar])+'.nc'
+    else:
+      self.fname='_'.join([self.bstr,self.cid,self.cver,
+                          self.cdomain,self.cfreq,self.cvar,
+                          self.cdate])+'.nc'
+    self.fpath=os.path.join(self.base,self.fname)
+    return self
+
+  def fpath2attr(self,fpath=None):
+    """
+    Splits the fpath (full path) into the different components 
+
+    Parameters:
+    -----------
+    fpath: str, optional (other from instance)
+
+    Returns:
+    None, changes the attr of the calling instance 
+    """
+
+    if fpath is None:
+      fp = self.fpath
+    else:
+      fp = fpath 
+
+    self.fpath=fp
+    self.base=os.path.dirname(self.fpath)
+    self.fname=os.path.basename(self.fpath)
+    fsplit=self.fname.split('_')
+    if len(fsplit) != 7 :
+      print "fsplit",len(fsplit)
+      raise NameError("fpath2attr: filename does not contain 7 identifiers: "+self.fname)
+    self.bstr=fsplit[0]  
+    self.cid=fsplit[1]   
+    self.cver=fsplit[2]  
+    self.cdomain=fsplit[3]
+    self.cfreq=fsplit[4]
+    self.cvar=fsplit[5]
+    self.cdate=fsplit[6][:-3]
+    self.ystart=int(fsplit[6][:4])
+    self.yend=int(fsplit[6][5:9])
+    return self
+

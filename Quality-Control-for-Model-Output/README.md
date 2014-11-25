@@ -1,49 +1,59 @@
 # Quality Control Checks for Model Output
 
-This is an initial version of the tool and was only tested with ECMWF data.
-Please upload to the ftp server some sample files so that the tool can be further tested.
+New version including the updated file naming structure
  
 ```e2obs_utils.py``` : python module with several utilities to read fields and process file names
 ```e2obs_check.py``` : python script to perform the check  
 
-###In preparation  
-This script to gather the messages information and produce a short report  
 
-Edit the script ```e2obs_check.py``` changing:
+**Usage**
 ```
-# it can be computed using "cdo" :  cdo gridarea ecmwf_wrr0_mon_2012.nc garea.nc
-fgarea='garea.nc'  
+python e2obs_check.py -h
+usage: e2obs_check.py [-h] [-b fbase] [-g fgarea] [-ys ystart] [-ye yend]
+                      [-d cdomain] [-i cid] [-v cver]
 
-## Location of netcdf files 
-floc='./'
-## or thredds server folder 
-#floc='https://vortices.npm.ac.uk/thredds/dodsC/ECMWFwrr0/'
+Earth2Observe quality control check
 
-cID='ecmwf' # instituion id 
-cVER='wrr0' # version id 
-FOUT='./'   # location for output message files 
+optional arguments:
+  -h, --help  show this help message and exit
+  -b fbase    path to folder containing netcdf files
+  -g fgarea   path to file containing grid area
+  -ys ystart  Start year of simulations
+  -ye yend    End year of simulations
+  -d cdomain  simulations domain
+  -i cid      institution id
+  -v cver     simulations version
+```
+**Example**
 
-## override e2ob default values:
-e2obs.SYEAR=1979 # starting year of simulation
-e2obs.EYEAR=2012 # last year of simulation
-e2obs.NLAT=360
-e2obs.NLON=720
+Assuming all the model files are in the folder "/somelocation/
+```
+python e2obs_check.py -b "/someloaction/" -g ./garea.nc -ys 1979 -ye 2012 -d glob30 -i ecmwf -v wrr1
 ```
 
-For the 0.5x0.5 default grid, you can use this file with the grid cell area ```garea.nc``` (included here)
-
-If the script runs correctly, it will produce text files with: error, warning, status and data messages for each year.
+If the script runs correctly, it will produce text file with: error, warning, status and data messages.
+The example output ```check_ecmwf_wrr1_glob30.txt```
 
 The checks are performed to:
-1. netCDF dimension sizes and  time information in the netcdf files (e.g: dtmsg_ecmwf_wrr0_1979.txt )
-2. Evaluation and closure of grid-point water balance (e.g. wbmsg_ecmwf_wrr0_1979.txt )
+
+1. File consistency checks:
+  * Loop on all possible variable names and temporal frequencies
+    * If a file is not found it is reported as a warning
+  * File name consistency: ```check_fname_consistency```
+  * Variable attributes: ```check_variable_consistency```
+  * File coordinates: ```check_file_coords```
+2. Evaluation of energy balance: ```check_eb```
+  * Computes the net energy as:
+  ```
+  SWnet+LWnet+Qle+Qh = residual
+  ```
+3. Evaluation and closure of grid-point water balance: ```check_eb```
   * The water balance in each grid point  
   ```
   Precip+Runoff+Evap = Δ(SWE+SoilMoist,GroundMoist,SurfStor,CanopInt) 
   ```
-  * Averaged over one year the two terms of the equation should balance within 5x1.0e-6 kg m-2 s-1(Assuming 1e-6 kg m-2 s-1 is the typical float32 resolution )  
-  * Computation of global land means of the different fluxes for consistency check   
-3. Evaluation of energy balance (eg. ebmsg_ecmwf_wrr0_1979.txt )  
+  * Averaged over the full period the two terms of the equation should balance within 5x1.0e-6 kg m-2 s-1 
+  * Computation of global land means of the different fluxes for consistency check
 
 Each file will contain a log with:
 * Wmsg:  - warning messages: should be checked
