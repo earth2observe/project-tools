@@ -25,6 +25,7 @@ optional arguments:
   -v cver     simulations version
 ```
 **Example**
+
 Assuming all the model files are in the folder "/somelocation/
 ```
 python e2obs_check.py -b "/someloaction/" -g ./garea.nc -ys 1979 -ye 2012 -d glob30 -i ecmwf -v wrr1
@@ -34,6 +35,7 @@ If the script runs correctly, it will produce text file with: error, warning, st
 The example output ```check_ecmwf_wrr1_glob30.txt```
 
 The checks are performed to:
+
 1. File consistency check:
   * Loop on all possible variable names and temporal frequencies
     * If a file is not found it is reported as a warning
