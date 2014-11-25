@@ -6,7 +6,7 @@ New version including the updated file naming structure
 ```e2obs_check.py``` : python script to perform the check  
 
 
-Usage:
+**Usage**
 ```
 python e2obs_check.py -h
 usage: e2obs_check.py [-h] [-b fbase] [-g fgarea] [-ys ystart] [-ye yend]
@@ -24,7 +24,7 @@ optional arguments:
   -i cid      institution id
   -v cver     simulations version
 ```
-Example:
+**Example**
 Assuming all the model files are in the folder "/somelocation/
 ```
 python e2obs_check.py -b "/someloaction/" -g ./garea.nc -ys 1979 -ye 2012 -d glob30 -i ecmwf -v wrr1
@@ -36,9 +36,7 @@ The example output ```check_ecmwf_wrr1_glob30.txt```
 The checks are performed to:
 1. File consistency check:
   * Loop on all possible variable names and temporal frequencies
-  ** If a file is not found it is reported as a warning 
-  
-  
+    * If a file is not found it is reported as a warning
 2. Evaluation and closure of grid-point water balance (e.g. wbmsg_ecmwf_wrr0_1979.txt )
   * The water balance in each grid point  
   ```
