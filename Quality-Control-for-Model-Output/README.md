@@ -36,17 +36,24 @@ The example output ```check_ecmwf_wrr1_glob30.txt```
 
 The checks are performed to:
 
-1. File consistency check:
+1. File consistency checks:
   * Loop on all possible variable names and temporal frequencies
     * If a file is not found it is reported as a warning
-2. Evaluation and closure of grid-point water balance (e.g. wbmsg_ecmwf_wrr0_1979.txt )
+  * File name consistency: ```check_fname_consistency```
+  * Variable attributes: ```check_variable_consistency```
+  * File coordinates: ```check_file_coords```
+2. Evaluation of energy balance: ```check_eb```
+  * Computes the net energy as:
+  ```
+  SWnet+LWnet+Qle+Qh = residual
+  ```
+3. Evaluation and closure of grid-point water balance: ```check_eb```
   * The water balance in each grid point  
   ```
   Precip+Runoff+Evap = Δ(SWE+SoilMoist,GroundMoist,SurfStor,CanopInt) 
   ```
-  * Averaged over one year the two terms of the equation should balance within 5x1.0e-6 kg m-2 s-1(Assuming 1e-6 kg m-2 s-1 is the typical float32 resolution )  
-  * Computation of global land means of the different fluxes for consistency check   
-3. Evaluation of energy balance (eg. ebmsg_ecmwf_wrr0_1979.txt )  
+  * Averaged over the full period the two terms of the equation should balance within 5x1.0e-6 kg m-2 s-1 
+  * Computation of global land means of the different fluxes for consistency check
 
 Each file will contain a log with:
 * Wmsg:  - warning messages: should be checked
