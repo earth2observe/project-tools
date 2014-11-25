@@ -1,10 +1,9 @@
 # Quality Control Checks for Model Output
 
 New version including the updated file naming structure
- 
+
 ```e2obs_utils.py``` : python module with several utilities to read fields and process file names
 ```e2obs_check.py``` : python script to perform the check  
-
 
 **Usage**
 ```
