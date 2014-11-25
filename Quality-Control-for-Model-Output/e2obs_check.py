@@ -3,26 +3,56 @@
 #  General quality control of e2ob simulations 
 #
 #  Emanuel Dutra, emanuel.dutra@ecmwf.int
-#  v0 August 2014 
+#  v1 November 2014 
 
 ## general modules to load 
+import glob
 import sys
-from netCDF4 import Dataset,date2num,date2index,num2date
-import time
-import datetime
-import os
-import ntpath
+from netCDF4 import Dataset,num2date
 import numpy as np
-import pandas as pd 
+import traceback
+import datetime as dt
 
-## specific 
-import e2obs_utils as e2obs
+#import matplotlib.pyplot as plt
+
+### specific
+import e2obs_utils as e2oU
 
 
-##==============================================
+## specific functions
+
+def date2yrmonday(indate):
+  """
+  Function to splite date into yr,mon,day
+
+  Parameters:
+  ----------
+  indate : np.array of type object with datetime
+  
+
+  Returns:
+  -------
+  year,mon,day as np.arrays
+  """
+  YR = np.array([ xx.year for xx in indate])
+  MON = np.array([ xx.month for xx in indate])
+  DAY = np.array([ xx.day for xx in indate])
+  return YR,MON,DAY
 
 ## function to compute a weighted mean of a field "infield" using the weights: grid_area 
 def compute_area_mean(infield,grid_area):
+  """
+  function to compute a weighted mean of a field "infield" using the weights: grid_area 
+
+  Parameters:
+  ----------
+  infield : np.array with the data
+  grid_area: np.array with the grid weights
+
+  Returns:
+  -------
+  returns: mean of the field
+  """
   try:
     tot_area = np.sum(grid_area[~infield.mask])
   except:
@@ -30,249 +60,368 @@ def compute_area_mean(infield,grid_area):
   xavg = np.sum(infield*grid_area)/tot_area
   return xavg
 
-##  Function to check file dimensions 
-def check_dims(fname,msg=None):
+def check_fname_consistency(finput,validD,msg=None):
+  """
+  Check file name consistency 
+
+  Parameters:
+  ----------
+  finput : class(e2oU.fname) : 
+  validD : dictionary of valid keys
+  msg    : message (optional)
+
+  Returns:
+  -------
+  msg is changed 
+  """
 
   if msg is None:
-    msg = e2obs.init_msg()
-  ctag=ntpath.basename(fname)+' dims:'
-  #print "Checking dimensions of:%s"%(fname)
-  finfo = e2obs.get_info_from_file(fname)
-  vdims = e2obs.dim_size(finfo)
-  try: 
-    nc = Dataset(fname,'r')
-  except:
-    print "could not load file"
-    print fname 
-    print "cannot continue check !!!"
-    sys.exit(-1)
+    msg = e2oU.init_msg()
 
-  #dimension sizes 
-  for vdim in ['time','lat','lon','nlevs']:
-    if vdim in nc.dimensions.keys():
-      if (len(nc.dimensions[vdim]) != vdims[vdim]) and (vdims[vdim] > 0 ):
-        msg['Emsg'].append(ctag+'Dimension %s has %i while it should have %i elements'%(vdim,len(nc.dimensions[vdim]),vdims[vdim]))
-      else:
-        msg['Smsg'].append(ctag+'Found dimension %s with correct %i elements'%(vdim,len(nc.dimensions[vdim])))
-    else:
-      msg['Emsg'].append(ctag+'Dimension %s was not found '%(vdim))
-  nc.close()
-  return msg 
-
-
-##=============================================
-## function to check time dimensions 
-
-def check_time(fname,msg=None):
-
-  if msg is None:
-    msg = e2obs.init_msg()
-  ctag=ntpath.basename(fname)+' time:'
-
-  finfo = e2obs.get_info_from_file(fname)
-  iYEAR=int(finfo['cYEAR'])
-  vdims = e2obs.dim_size(finfo)
-  nc = Dataset(fname,'r')
-
-  # check time 
-  try:
-    mtime =  pd.to_datetime(num2date(nc.variables['time'][:],nc.variables['time'].units))
-    if finfo['cFREQ'] == 'day':
-      vtime = pd.date_range(pd.datetime(iYEAR,1,1,0,0), periods=vdims['time'],freq='D')
-    if finfo['cFREQ'] == 'mon':
-      vtime = pd.date_range(pd.datetime(iYEAR,1,1,0,0), periods=vdims['time'],freq='MS')
-    tdiff  = ((mtime.asi8-vtime.asi8)/1e9/3600)  # difference in hours 
-    if np.sum(tdiff != 0 ) > 0:
-      msg['Wmsg'].append(ctag+'Found %i different time values from %s with max %f min %f mean %f hours differences'%
-                  (np.sum(tdiff != 0 ),str(vtime[0]),np.max(tdiff),np.min(tdiff),np.mean(tdiff)))
-    else:
-      msg['Smsg'].append(ctag+'time variable check: OK')
-  except:
-    msg['Emsg'].append(ctag+'Could not check time information, check time variable and units attributes')
+  emsg=0
+  for att in ['cid','cver','cdomain','cfreq','cvar','ystart','yend']:
+    if not getattr(finput,att) in validD[att] :
+      msg['Emsg'].append(finput.fname+': attribute:'+att +' with value:'+str(getattr(finput,att))+' is not in the default list' )
+      emsg=emsg+1
+  if emsg == 0 :
+    msg['Smsg'].append(finput.fname+' file name consistency check OK')
   
-  return msg 
-
-
-##=================================================
-## function to check water balance 
-def eval_wb(fnames,fgarea,msg=None):
-
+  
+def check_variable_consistency(finput,msg=None):
+  """
+  Check variables consistency (meta data only 
+  
+  Parameters:
+  ----------
+  finput : class(e2oU.fname) : 
+  msg    : message (optional)
+  
+  Returns:
+  -------
+  message 
+  """
+  
   if msg is None:
-    msg = e2obs.init_msg()
-  dfinfo = e2obs.get_info_from_file(fnames['day'])
+    msg = e2oU.init_msg()
+  
+  nc = Dataset(finput.fpath,'r')
 
-  grid_area = e2obs.load_grid_area(fgarea)
+  ## general check 
+  emsg=0
+  for cvar in ['lat','lon','time',finput.cvar]:
+    for att in ['long_name','units','_FillValue','comment']:
+      if att ==  '_FillValue' and cvar != finput.cvar : continue
+      if att ==  'comment' and cvar not in ['SurfMoist','RootMoist'] : continue
+      if finput.cfreq == "fix" and cvar == "time":  continue
+      try:
+        getattr(nc.variables[cvar],att)
+      except:
+        msg['Emsg'].append(finput.fname+': attribute "%s" of variable "%s" not present'%(att,cvar) )
+        emsg=emsg+1
 
 
-  ## water balance components
-  cevapC=['ECanop','TVeg','ESoil','EWater']  # evaporation components 
-  crunoffC=['Qs','Qsb','Qrec']               #  runoff components  
-  cwatbC=['Precip','Runoff','Evap','Rainf','Qsm'] # water balance components 
-
-  ctag='WB %s '%dfinfo['cYEAR']
-  globM={}  ## global mean values for information only ! 
-
-  # 1. load water balance components:
-  vwatbC={}
-  for cvar in cwatbC:
-    xdata,xxtimeWB,msg = e2obs.load_nc_var(fnames['mon'],cvar,msg=msg)
-    vwatbC[cvar] = np.mean(xdata,0) # temporal mean 
-    globM[cvar] = compute_area_mean(vwatbC[cvar],grid_area)
+  if emsg == 0 :
+    msg['Smsg'].append(finput.fname+' variables attributes consistency check OK')
     
-  ## compute TWSV from water storage reservoirs:
-  vdims = e2obs.dim_size(dfinfo)
-  tinD=[0,vdims['time']-1] # first and last day for the daily file 
-  ndays=tinD[1]-tinD[0]+1  # number of days 
-  vwatS={}
-  cwatS=['SWE','SoilMoist','CanopInt','TWSV','flxC','TWSV_stor']
-  for cvar in cwatS:
-    if cvar == 'TWSV': # TWSV from the fluxes 
-      vwatS[cvar]  = vwatbC['Precip']+vwatbC['Runoff']+vwatbC['Evap']
-    elif cvar == 'TWSV_stor':  # TWSV from the state variables 
-      vwatS[cvar] =  vwatS['SWE']+vwatS['SoilMoist']+vwatS['CanopInt']+vwatS['flxC']
-    elif cvar == 'flxC':  # daily fluxes correction since the state variables are daily means 
-      vwatS[cvar] = vwatS['SWE']*0.
-      for cvar1 in ['Rainf','Evap','Runoff']:
-        xdata,xxtime,msg = e2obs.load_nc_var(fnames['day'],cvar1,tinD=tinD,msg=msg)
-        vwatS[cvar] = vwatS[cvar]+0.5*(xdata[1,:,:]+xdata[0,:,:])/(ndays)
-    else:
-      xdata,xxtimeS,msg = e2obs.load_nc_var(fnames['day'],cvar,tinD=tinD,msg=msg)
-      if cvar == 'SoilMoist': # total soil moisture 
-        xdata = np.sum(xdata,1).squeeze()
-      vwatS[cvar] = (xdata[1,:,:]-xdata[0,:,:])/(ndays*86400)
-    globM[cvar] = compute_area_mean(vwatS[cvar],grid_area)
+  nc.close()
 
-  ## water balance mismatch 
-  vwatS['TWSV_res'] = vwatS['TWSV']-vwatS['TWSV_stor']
-  globM['TWSV_res'] = compute_area_mean(vwatS['TWSV_res'],grid_area)
-  for cvar in ['TWSV','TWSV_stor','TWSV_res']:
-    xx = vwatS[cvar]
-    xx[grid_area == 0] =0.
-    msg['Dmsg'].append(ctag+"variable %s with gpmin %e, gpmax %e fldmean %e #gp>thr %i"%
-                      (cvar,np.min(xx),np.max(xx),compute_area_mean(np.abs(xx),grid_area),np.sum(np.abs(xx)>5e-6)))
-    if cvar == 'TWSV_res':
-      if np.sum(np.abs(xx)>5e-6) > 0 :
-        msg['Wmsg'].append(ctag+"There are grid points with TWSV residual above 5e-6 kg m-2 -s-1 - check WB closure carefully")
-
-  for cvar in cwatbC+['TWSV','TWSV_stor','TWSV_res']:
-    msg['Dmsg'].append(ctag+"Global mean of %s %f (mm/day) with %s/Precip %f"%
-                      (cvar,globM[cvar]*86400.,cvar,globM[cvar]/globM['Precip']))
-
-  # 2. check/load evap. components
-  vevapC={}
-  tevapC = vwatbC['Evap']*0.
-  for cvar in cevapC:
-    xdata,xxtime,msg = e2obs.load_nc_var(fnames['mon'],cvar,msg=msg)
-    vevapC[cvar] = np.mean(xdata,0)
-    globM[cvar] = compute_area_mean(vevapC[cvar],grid_area)
-    tevapC = tevapC + vevapC[cvar]
-
-  # the residual is set as SubSnow (maybe not the best approach?)
-  vevapC['SubSnow'] = vwatbC['Evap'] - tevapC
-  globM['SubSnow'] = compute_area_mean(vevapC['SubSnow'],grid_area)
-
-  #print 
-  for cvar in ['Evap']+cevapC+['SubSnow']:
-    msg['Dmsg'].append(ctag+"Global mean of %s %f (mm/day) with %s/Evap %f"%
-                      (cvar,globM[cvar]*86400.,cvar,globM[cvar]/globM['Evap']))
+def check_file_coords(finput,msg=None):
+  """
+  Check file coordinates 
   
-  # 3. check/load runoff
-  vrunoffC={}
-  for cvar in crunoffC:
-    xdata,xxtime,msg = e2obs.load_nc_var(fnames['mon'],cvar,msg=msg)
-    vrunoffC[cvar] = np.mean(xdata,0)
-    globM[cvar] = compute_area_mean(vrunoffC[cvar],grid_area)
-
-  for cvar in ['Runoff']+crunoffC:
-    msg['Dmsg'].append(ctag+"Global mean of %s %f (mm/day) with %s/Runoff %f"%
-                      (cvar,globM[cvar]*86400.,cvar,globM[cvar]/globM['Runoff']))
-  return msg
-
-
-##===========================================================
-## Energy balance check 
-def eval_eb(fnames,fgarea,msg=None):
+  Parameters:
+  ----------
+  finput : class(e2oU.fname) : 
+  msg    : message (optional)
+  
+  Returns:
+  -------
+  message 
+  """
   if msg is None:
-    msg = e2obs.init_msg()
-  dfinfo = e2obs.get_info_from_file(fnames['day'])
-  grid_area = e2obs.load_grid_area(fgarea)
+    msg = e2oU.init_msg()
+  
+  emsg=0
+  nc = Dataset(finput.fpath,'r')
+  
+  vLAT,vLON = e2oU.default_latlon(finput.cdomain)
 
-  ## energy balance components
-  cenbC=['LWnet','SWnet','Qh','Qle','SFCnet']
-  ctag='EB %s '%dfinfo['cYEAR']
+  if finput.cfreq == "mon":
+    nyears=finput.yend-finput.ystart+1
+    vTIME = num2date(np.arange(5,365.25*nyears,365.25/12),"days since %4i-01-01 00:00:00"%(finput.ystart))
+  elif finput.cfreq == "day":
+    dstart=dt.datetime(finput.ystart,1,1).toordinal()
+    dend=dt.datetime(finput.yend,12,31).toordinal()
+    vTIME = num2date(np.arange(0,dend-dstart+1,1),"days since %4i-01-01 00:00:00"%finput.ystart)
+  elif finput.cfreq == "fix":
+    pass
+  else:
+    print "This frequency test is not implemented yet",finput.cfreq
+    sys.exit(-1)
+    
+  if finput.cfreq != "fix":
+    vYR,vMON,vDAY = date2yrmonday(vTIME)
+    fTIME = num2date(nc.variables['time'][:],nc.variables['time'].units)
+    fYR,fMON,fDAY = date2yrmonday(fTIME)
+
+  fLAT = nc.variables['lat'][:]
+  fLON = nc.variables['lon'][:]
+
+  try:
+    ddlon = np.abs(np.sum(vLON-fLON))
+    ddlat = np.abs(np.sum(vLAT-fLAT))
+    if ddlon > np.finfo(np.float32).eps or ddlat > np.finfo(np.float32).eps :
+      msg['Emsg'].append(finput.fname+' Lat or Lon arrays in file is not correct')
+      emsg=emsg+1
+  except:
+    msg['Emsg'].append(finput.fname+' Some problem checking lat/lon arrays: check standard output')
+    traceback.print_exc()
+    emsg=emsg+1
+
+  if finput.cfreq != "fix":
+    try:
+      ddyear = np.abs(np.sum(vYR-fYR))
+      ddmon = np.abs(np.sum(vMON-fMON))
+      ddday = np.abs(np.sum(vDAY-fDAY))
+      if ddyear > np.finfo(np.float32).eps or ddmon > np.finfo(np.float32).eps :
+        msg['Emsg'].append(finput.fname+' time year/mon arrays in file is not correct')
+        emsg=emsg+1
+      if ddday > np.finfo(np.float32).eps and finput.cfreq == "day":
+        msg['Emsg'].append(finput.fname+' time day arrays in file is not correct')
+        emsg=emsg+1
+    except:
+      msg['Emsg'].append(finput.fname+' Some problem checking time arrays: check standard output')
+      traceback.print_exc()
+      emsg=emsg+1
+
+  if emsg == 0 :
+    msg['Smsg'].append(finput.fname+' file coords check OK')
+
+  nc.close()
+  
+  
+def check_eb(cf,ystart,yend,cdomain,cid,cver,msg=None):
+  """
+  Energy balance check 
+
+  Parameters:
+  ----------
+  Returns:
+  -------
+  """
+  rystart=ystart
+  ryend=yend
+  vLAT,vLON = e2oU.default_latlon(cf.cdomain)
+  nlat = len(vLAT)
+  nlon = len(vLON)
+
+  grid_area = e2oU.load_grid_area(fgarea)
+  cvarsEB=['SWnet','LWnet','Qh','Qle','Qsm','NET']
+  if msg is None:
+    msg=e2oU.init_msg()
+
+
+  venB={}
   globM={}  ## global mean values for information only ! 
-
-  ## load variables
-  venbC={}
-  for cvar in cenbC:
-    if cvar == 'SFCnet':
-      venbC[cvar] = venbC['LWnet']+venbC['SWnet']+venbC['Qh']+venbC['Qle']
+  for cvar in cvarsEB:
+    cf = cf.attr2fpath(cfreq='mon',cvar=cvar,cdomain=cdomain,cid=cid,cver=cver)
+    print 'EB, loading:',cvar
+    
+    if cvar == "NET":
+      venB[cvar] = np.zeros((nlat,nlon))
+      for cc in cvarsEB[:-1]:
+        venB[cvar] = venB[cvar] + venB[cc]
     else:
-      xdata,xxtimeEB,msg = e2obs.load_nc_var(fnames['mon'],cvar,msg=msg)
-      venbC[cvar] = np.mean(xdata,0) # temporal mean 
-    globM[cvar] = compute_area_mean(venbC[cvar],grid_area)
+      xdata,xtime = e2oU.load_nc_var(cf.fpath,cf.cvar,dstart=dt.datetime(rystart,1,1),dend=dt.datetime(ryend,12,31))
+      if xdata is None:
+        venB[cvar] = np.zeros((nlat,nlon))
+        msg['Wmsg'].append("EB: Could not find variable: '%s', setting to zero!'"%(cvar))
+      else:
+        venB[cvar] = np.mean(xdata,0)
+    if cvar == "Qsm":
+      venB[cvar] = venB[cvar]*3.34e5*-1.
+    globM[cvar] = compute_area_mean(venB[cvar],grid_area)
 
-  for cvar in cenbC:
-      msg['Dmsg'].append(ctag+"Global mean of %s %f (W m-2) with %s/SWnet %f"%
-                        (cvar,globM[cvar],cvar,globM[cvar]/globM['SWnet']))
+  for cvar in cvarsEB:
+    msg['Dmsg'].append("EB: Global mean of %s %f (W m-2) with %s/%s %f"%
+                          (cvar,globM[cvar],cvar,cvarsEB[0],globM[cvar]/globM[cvarsEB[0]]))
   return msg 
 
+def check_wb(cf,ystart,yend,cdomain,cid,cver,msg=None):
+  """
+  Water balance check 
 
-##=========================================================
-## Main script here 
+  Parameters:
+  ----------
+  Returns:
+  -------
+  """
+  rystart=ystart
+  ryend=yend
+  dstart=dt.datetime(cf.ystart,1,1).toordinal()
+  dend=dt.datetime(cf.yend,12,31).toordinal()
+  xTIME = num2date(np.arange(0,dend-dstart+1,1),"days since %4i-01-01 00:00:00"%cf.ystart)
+  tinD=[np.nonzero(xTIME==dt.datetime(rystart,1,1))[0][0],np.nonzero(xTIME==dt.datetime(ryend,12,31))[0][0]]
+  ndays=tinD[1]-tinD[0]+1
+  #print tinD
+  #print ndays
+  vLAT,vLON = e2oU.default_latlon(cf.cdomain)
+  nlat = len(vLAT)
+  nlon = len(vLON)
 
-# location of grid cell area
-# it can be computed using "cdo" :  cdo gridarea ecmwf_wrr0_mon_2012.nc garea.nc
-fgarea='./garea.nc'  
-
-## Location of netcdf files 
-#floc='/scratch/rd/need/tmp/e2obs/g57n/'
-## or thredds server folder 
-floc='https://vortices.npm.ac.uk/thredds/dodsC/ECMWFwrr0/'
-
-cID='ecmwf' # instituion id 
-cVER='wrr0' # version id 
-FOUT='./'   # location for output message files 
-
-## override e2ob default values:
-e2obs.SYEAR=1979 # starting year of simulation
-e2obs.EYEAR=2012 # last year of simulation
-e2obs.NLAT=360
-e2obs.NLON=720
-
-
-## loop on years 
-for year in range(e2obs.SYEAR,e2obs.EYEAR+1):
-
-  # initialize the messages dictionaries 
-  dtmsg = e2obs.init_msg()
-  wbmsg = e2obs.init_msg()
-  ebmsg = e2obs.init_msg()
-  
-  cYEAR=str(year)
-  fnames={}
-  fnames['day'] = e2obs.gen_file_name(floc,cYEAR,cID,cVER,'day')
-  fnames['mon'] = e2obs.gen_file_name(floc,cYEAR,cID,cVER,'mon')
-  print "Processing:"
-  print fnames
-  
-  ## check dim/time of files
-  print "Checking dim/time "
-  for fname in fnames.keys():
-    dtmsg = check_dims(fnames[fname],msg=dtmsg)
-    dtmsg = check_time(fnames[fname],msg=dtmsg)
-
-  print "Checking wb"
-  wbmsg = eval_wb(fnames,fgarea,msg=wbmsg)
-
-  print "Checking eb"
-  ebmsg = eval_eb(fnames,fgarea,msg=ebmsg)
-  
-  ## write messages to text files 
-  e2obs.write_msg2txt(dtmsg,'reports/'+FOUT+'dtmsg_%s_%s_%s.txt'%(cID,cVER,cYEAR))
-  e2obs.write_msg2txt(wbmsg,'reports/'+FOUT+'wbmsg_%s_%s_%s.txt'%(cID,cVER,cYEAR))
-  e2obs.write_msg2txt(ebmsg,'reports/'+FOUT+'ebmsg_%s_%s_%s.txt'%(cID,cVER,cYEAR))
+  grid_area = e2oU.load_grid_area(fgarea)
+  cvarsEB=['Precip','Runoff','Evap','Stor','NET']
+  if msg is None:
+    msg=e2oU.init_msg()
 
 
+  venB={}
+  globM={}  ## global mean values for information only ! 
+  for cvar in cvarsEB:
+
+    print 'WB, loading:',cvar
+
+    if cvar == "NET":
+      venB[cvar] = np.zeros((nlat,nlon))
+      for cc in cvarsEB[:-1]:
+        venB[cvar] = venB[cvar] + venB[cc]
+    elif cvar == "Stor":
+      venB[cvar] = np.zeros((nlat,nlon))
+      for svar in ['TotMoist','SWE','CanopInt']:
+        cf = cf.attr2fpath(cfreq='day',cvar=svar,cdomain=cdomain,cid=cid,cver=cver)
+        xdata,xtime = e2oU.load_nc_var(cf.fpath,cf.cvar,tinD=tinD)
+        #if svar == 'TotMoist':print xtime
+        venB[cvar] = venB[cvar] + -1*(xdata[1,:,:] - xdata[0,:,:])/(ndays)
+    else:
+      cf = cf.attr2fpath(cfreq='mon',cvar=cvar,cdomain=cdomain,cid=cid,cver=cver)
+      xdata,xtime = e2oU.load_nc_var(cf.fpath,cf.cvar,dstart=dt.datetime(rystart,1,1,0,0,0),dend=dt.datetime(ryend,12,31,23,59,59))
+      #if cvar == 'Precip': print xtime
+      if xdata is None:
+        venB[cvar] = np.zeros((nlat,nlon))
+        msg['Wmsg'].append("EB: Could not find variable: '%s', setting to zero!'"%(cvar))
+      else:
+        venB[cvar] = np.mean(xdata,0)
+      venB[cvar] = venB[cvar]*86400.
+    globM[cvar] = compute_area_mean(venB[cvar],grid_area)
+
+  for cvar in cvarsEB:
+    msg['Dmsg'].append("WB: Global mean of %s %f (mm day-1) with %s/%s %f"%
+                          (cvar,globM[cvar],cvar,cvarsEB[0],globM[cvar]/globM[cvarsEB[0]]))
+    if cvar == "NET" : 
+      msg['Dmsg'].append('WB:'+" variable %s with gpmin %e, gpmax %e fldmean %e #gp>thr %i"%
+                      (cvar,np.min(venB[cvar]),np.max(venB[cvar]),globM[cvar],np.sum(np.abs(venB[cvar])>5e-6*86400.)))
+      if np.sum(np.abs(venB[cvar])>5e-6*86400.) > 0:
+        msg['Wmsg'].append('WB:'+" variable %s with gpmin %e, gpmax %e fldmean %e #gp>thr %i"%
+                      (cvar,np.min(venB[cvar]),np.max(venB[cvar]),globM[cvar],np.sum(np.abs(venB[cvar])>5e-6*86400.)))
+    #plt.figure()
+    #plt.pcolormesh(vLON,vLAT,venB[cvar]);plt.colorbar()   # for plotting
+    #plt.title(cvar)
+  return msg 
+
+def read_args():
+  """
+  Get arguments frmo command line 
+
+  Parameters:
+  ----------
+  Returns:
+  -------
+  """
+  import argparse
+  parser = argparse.ArgumentParser(description='Earth2Observe quality control check')
+  parser.add_argument('-b',dest='fbase',default='./',type=str,metavar='fbase',
+                      help='path to folder containing netcdf files ')
+  parser.add_argument('-g',dest='fgarea',default='./garea.nc',type=str,metavar='fgarea',
+                      help='path to file containing grid area')
+  parser.add_argument('-ys',dest='ystart',default=1979,type=int,metavar='ystart',
+                      help='Start year of simulations')
+  parser.add_argument('-ye',dest='yend',default=2012,type=int,metavar='yend',
+                      help='End year of simulations')
+  parser.add_argument('-d',dest='cdomain',default="glob30",type=str,metavar='cdomain',
+                      help='simulations domain')
+  parser.add_argument('-i',dest='cid',default="ecmwf",type=str,metavar='cid',
+                      help='institution id')
+  parser.add_argument('-v',dest='cver',default="wrr1",type=str,metavar='cver',
+                      help='simulations version')
+  args =  parser.parse_args()
+  return args 
+
+##==============================================
+##==============================================
+## MAIN SCRIPT
+ #python e2obs_check.py -b ./ -g ./garea.nc -ys 1979 -ye 2012 -d glob30 -i ecmwf -v wrr1
+
+##================================================
+##0 . get command line arguments 
+args=read_args()
+fbase=args.fbase          #'/scratch/rd/need/tmp/e2obs/g76h/'  # folder location of the netcdf files 
+fgarea=args.fgarea        #'/scratch/rd/need/tmp/e2obs/g57n/garea.nc'  # location of the garea.nc file 
+
+## defaults
+ystart=args.ystart       #1979 start year
+yend=args.yend          #2012  end year
+cdomain=args.cdomain       #"glob30"  simulations domain
+cid=args.cid           #"ecmwf"  institution id 
+cver=args.cver          #"wrr1"    simulations version id 
+
+print args
+
+##=======================================================
+## 1. File consistency checks: we loop on all possible variables:
+msg=e2oU.init_msg() # intialize message dictionary 
+cf = e2oU.fname()   # initialize file name class 
+
+# loop on all possible variables / frequencies
+for cvar in e2oU.validD['cvar']:
+  for cfreq in ['day','mon','fix']:
+    if cfreq == 'fix' and cvar not in e2oU.validD['cvar_fix']:
+      continue
+    if cvar in e2oU.validD['cvar_fix'] and cfreq != 'fix':
+      continue
+    cf=cf.attr2fpath(base=fbase,cfreq=cfreq,cvar=cvar,cdomain=cdomain,
+                     ystart=ystart,yend=yend,cid=cid,cver=cver)
+    print "checking:", cf.fpath
 
 
+    # 1.1 :check if file can be opened ! 
+    try:
+      nc = Dataset(cf.fpath,'r')
+    except:
+      msg['Wmsg'].append(cf.fname+': cannot open netcdf file' )
+      continue
+    nc.close()
+    
+    ## 1.2 : check that file name is consistent (should be !)
+    check_fname_consistency(cf,e2oU.validD,msg)
+
+    # 1.3 : Check if the variable attributes are ok
+    check_variable_consistency(cf,msg)
+    
+    # 1.4 : check the coordinate attributes 
+    check_file_coords(cf,msg)
+
+##===========================================
+## 2. Energy check 
+cf = e2oU.fname()
+try:
+  cf=cf.attr2fpath(base=fbase,cfreq='mon',cvar='SWnet',cdomain=cdomain,
+                     ystart=ystart,yend=yend,cid=cid,cver=cver)
+  msg = check_eb(cf,ystart,yend,cdomain,cid,cver,msg)
+except:
+  msg['Wmsg'].append('cannot find SWnet file: energy balance cannot be checked' )
+
+
+##===========================================
+## 3. Water balance
+cf = e2oU.fname()
+try:
+  cf=cf.attr2fpath(base=fbase,cfreq='mon',cvar='Precip',cdomain=cdomain,
+                     ystart=ystart,yend=yend,cid=cid,cver=cver)
+  msg = check_wb(cf,ystart,yend,cdomain,cid,cver,msg)
+except:
+  msg['Wmsg'].append('cannot find Precip file: Water balance cannot be checked' )
+
+#===========================================
+#4. save message to output:
+print 'saving output to: ','check_%s_%s_%s.txt'%(cid,cver,cdomain)
+e2oU.write_msg2txt(msg,'check_%s_%s_%s.txt'%(cid,cver,cdomain))

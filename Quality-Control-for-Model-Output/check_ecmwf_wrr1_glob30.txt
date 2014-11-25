@@ -1,0 +1,93 @@
+======================
+Wmsg:79
+e2o_ecmwf_wrr1_glob30_day_Precip_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_Precip_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_Evap_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_Evap_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_Runoff_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_Runoff_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_Rainf_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_Rainf_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_Qs_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_Qs_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_Qsb_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_Qsb_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_Qrec_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_Qrec_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_Qsm_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_Qsm_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_PotEvap_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_PotEvap_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_ECanop_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_ECanop_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_TVeg_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_TVeg_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_ESoil_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_ESoil_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_EWater_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_EWater_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_RivOut_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_RivOut_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_Dis_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_Dis_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_SWnet_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_SWnet_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_LWnet_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_LWnet_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_Qle_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_Qle_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_Qh_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_Qh_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_AvgSurfT_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_AvgSurfT_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_Albedo_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_Albedo_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_LAI_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_LAI_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_SWE_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_SWE_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_CanopInt_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_CanopInt_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_SWEVeg_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_SWEVeg_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_SurfStor_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_SurfStor_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_WaterTableD_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_WaterTableD_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_SnowFrac_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_SnowFrac_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_SnowDepth_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_SnowDepth_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_SurfMoist_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_SurfMoist_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_RootMoist_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_RootMoist_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_TotMoist_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_TotMoist_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_day_GroundMoist_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_mon_GroundMoist_1979-2012.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_fix_lsm.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_fix_SurfSoilSat.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_fix_RootSoilSat.nc: cannot open netcdf file
+e2o_ecmwf_wrr1_glob30_fix_TotSoilSat.nc: cannot open netcdf file
+EB: Could not find variable: 'SWnet', setting to zero!'
+EB: Could not find variable: 'LWnet', setting to zero!'
+EB: Could not find variable: 'Qh', setting to zero!'
+EB: Could not find variable: 'Qle', setting to zero!'
+EB: Could not find variable: 'Qsm', setting to zero!'
+EB: Could not find variable: 'Precip', setting to zero!'
+EB: Could not find variable: 'Runoff', setting to zero!'
+EB: Could not find variable: 'Evap', setting to zero!'
+cannot find Precip file: Water balance cannot be checked
+======================
+Dmsg:6
+EB: Global mean of SWnet 0.000000 (W m-2) with SWnet/SWnet nan
+EB: Global mean of LWnet 0.000000 (W m-2) with LWnet/SWnet nan
+EB: Global mean of Qh 0.000000 (W m-2) with Qh/SWnet nan
+EB: Global mean of Qle 0.000000 (W m-2) with Qle/SWnet nan
+EB: Global mean of Qsm 0.000000 (W m-2) with Qsm/SWnet nan
+EB: Global mean of NET 0.000000 (W m-2) with NET/SWnet nan
+======================
+Emsg:0
+======================
+Smsg:0
