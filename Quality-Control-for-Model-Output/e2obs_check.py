@@ -178,7 +178,7 @@ def check_file_coords(finput,msg=None):
     traceback.print_exc()
     emsg=emsg+1
 
-  if finput.cfreq != "fix":
+  if finput.cfreq != "fix" :
     try:
       ddyear = np.abs(np.sum(vYR-fYR))
       ddmon = np.abs(np.sum(vMON-fMON))

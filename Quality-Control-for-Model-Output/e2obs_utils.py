@@ -14,9 +14,9 @@ import numpy as np
 
 ## list of allowed identifiers:
 validD={}
-validD['cid']=['ecmwf','univu','metfr','nerc','jrc','cnrs','univk','ambio','csiro']
-validD['cver']=['wrr1','wrr2']
-validD['cdomain']=['glob30','glob06','EUMED30']
+validD['cid']=['ecmwf','univu','metfr','nerc','jrc','cnrs','univk','ambio','csiro','eth']
+validD['cver']=['wrr1','wrr2','wrr1_exp1']
+validD['cdomain']=['glob30','glob06','eumed30']
 validD['cfreq']=['day','mon','1hr','fix']
 validD['cvar']=['Precip','Evap','Runoff','Rainf','Qs','Qsb','Qrec','Qsm','PotEvap',
                 'ECanop','TVeg','ESoil','EWater','RivOut','Dis','SWnet','LWnet','Qle','Qh',
