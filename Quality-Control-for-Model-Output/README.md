@@ -27,7 +27,10 @@ optional arguments:
 
 Assuming all the model files are in the folder "/somelocation/
 ```
+Local files:
 python e2obs_check.py -b "/someloaction/" -g ./garea.nc -ys 1979 -ye 2012 -d glob30 -i ecmwf -v wrr1
+Remote files on the thredds server
+python e2obs_check.py -b https://wci.earth2observe.eu/thredds/dodsC/ecmwf/wrr1/ -g ./garea.nc -ys 1979 -ye 2012 -d glob30 -i ecmwf -v wrr1
 ```
 
 If the script runs correctly, it will produce text file with: error, warning, status and data messages.
