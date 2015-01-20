@@ -66,8 +66,10 @@ def load_nc_var(ffile,cvar,dstart=None,dend=None,tinD=None):
  
   """
  
-  if not os.path.isfile(ffile):
-    print ffile,"\n!! Warning !! File not present !!"
+  try:
+    nc = Dataset(ffile,'r')
+  except: 
+    print ffile,"\n!! Warning !! Could not open file !!"
     print ffile
     return None,None
 

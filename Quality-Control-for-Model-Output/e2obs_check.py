@@ -270,27 +270,30 @@ def check_wb(cf,ystart,yend,cdomain,cid,cver,msg=None):
   nlon = len(vLON)
 
   grid_area = e2oU.load_grid_area(fgarea)
-  cvarsEB=['Precip','Runoff','Evap','Stor','NET']
+  cvarsWB=['Precip','Runoff','Evap','Stor','NET']
+  #cvarsWB=['Precip','Runoff','Evap','NET']
   if msg is None:
     msg=e2oU.init_msg()
 
 
   venB={}
   globM={}  ## global mean values for information only ! 
-  for cvar in cvarsEB:
+  for cvar in cvarsWB:
 
     print 'WB, loading:',cvar
 
     if cvar == "NET":
       venB[cvar] = np.zeros((nlat,nlon))
-      for cc in cvarsEB[:-1]:
+      for cc in cvarsWB[:-1]:
         venB[cvar] = venB[cvar] + venB[cc]
     elif cvar == "Stor":
       venB[cvar] = np.zeros((nlat,nlon))
       for svar in ['TotMoist','SWE','CanopInt']:
         cf = cf.attr2fpath(cfreq='day',cvar=svar,cdomain=cdomain,cid=cid,cver=cver)
         xdata,xtime = e2oU.load_nc_var(cf.fpath,cf.cvar,tinD=tinD)
-        #if svar == 'TotMoist':print xtime
+        if xdata is None:
+          xdata = np.zeros((2,nlat,nlon))
+          msg['Wmsg'].append("WB: Could not find variable: '%s', setting to zero!'"%(svar))
         venB[cvar] = venB[cvar] + -1*(xdata[1,:,:] - xdata[0,:,:])/(ndays)
     else:
       cf = cf.attr2fpath(cfreq='mon',cvar=cvar,cdomain=cdomain,cid=cid,cver=cver)
@@ -298,15 +301,15 @@ def check_wb(cf,ystart,yend,cdomain,cid,cver,msg=None):
       #if cvar == 'Precip': print xtime
       if xdata is None:
         venB[cvar] = np.zeros((nlat,nlon))
-        msg['Wmsg'].append("EB: Could not find variable: '%s', setting to zero!'"%(cvar))
+        msg['Wmsg'].append("WB: Could not find variable: '%s', setting to zero!'"%(cvar))
       else:
         venB[cvar] = np.mean(xdata,0)
       venB[cvar] = venB[cvar]*86400.
     globM[cvar] = compute_area_mean(venB[cvar],grid_area)
 
-  for cvar in cvarsEB:
+  for cvar in cvarsWB:
     msg['Dmsg'].append("WB: Global mean of %s %f (mm day-1) with %s/%s %f"%
-                          (cvar,globM[cvar],cvar,cvarsEB[0],globM[cvar]/globM[cvarsEB[0]]))
+                          (cvar,globM[cvar],cvar,cvarsWB[0],globM[cvar]/globM[cvarsWB[0]]))
     if cvar == "NET" : 
       msg['Dmsg'].append('WB:'+" variable %s with gpmin %e, gpmax %e fldmean %e #gp>thr %i"%
                       (cvar,np.min(venB[cvar]),np.max(venB[cvar]),globM[cvar],np.sum(np.abs(venB[cvar])>5e-6*86400.)))
@@ -316,6 +319,13 @@ def check_wb(cf,ystart,yend,cdomain,cid,cver,msg=None):
     #plt.figure()
     #plt.pcolormesh(vLON,vLAT,venB[cvar]);plt.colorbar()   # for plotting
     #plt.title(cvar)
+    #if (cvar == "NET"):
+      #plt.figure()
+      #xx = venB[cvar]
+      #xx[np.abs(venB[cvar])<5e-6*86400.] = 0
+      #plt.pcolormesh(vLON,vLAT,venB[cvar]);plt.colorbar()   # for plotting
+      #plt.title(cvar+' 0 == ok') 
+  #plt.show()
   return msg 
 
 def read_args():
