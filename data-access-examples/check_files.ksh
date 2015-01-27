@@ -11,8 +11,8 @@ cvars+="RivOut Dis SWnet LWnet Qle Qh AvgSurfT Albedo LAI SWE CanopInt SWEVeg Su
 cvars+="WaterTableD SnowFrac SnowDepth SurfMoist RootMoist TotMoist GroundMoist "
 cvars+="lsm SurfSoilSat RootSoilSat TotSoilSat"
 
-
-fout=e2o_resume_$(date +"%Y-%m-%d").html # output html file 
+freq0="day"
+fout=e2o_resume_${freq0}_$(date +"%Y-%m-%d").html # output html file 
 
 echo "<html>
 <head> 
@@ -33,7 +33,7 @@ do
   echo "<tr><td>$cvar</td>" >> $fout
   for cid in $ids
   do
-    freq="day"
+    freq=$freq0
     case $cvar in
      lsm|SurfSoilSat|RootSoilSat|TotSoilSat) freq="fix";;
     esac
@@ -41,8 +41,9 @@ do
     ./extract_E2OBS_simulations.ksh --id $cid --variable $cvar --frequency $freq -c 1>out_extract 2>&1 || Lexist=false
     echo $cid $cvar $Lexist
     if [[ $Lexist = true ]]; then
-      url=$( cat out_extract | awk '{print $2}' )
-      echo "<td><a href=\"$url\">$freq</a></td>" >> $fout
+      url=$( cat out_extract | grep "fileurl" | awk '{print $2}' )
+      dap=$( cat out_extract | grep "opendap" | awk '{print $2}' )
+      echo "<td><a href=\"$url\">url</a>,<a href=\"$dap\">dap</a></td>" >> $fout
     else
       echo "<td><b>NA</b></td>" >> $fout
     fi

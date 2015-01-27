@@ -15,6 +15,7 @@ set -eu
 
 ## defaults
 httpLOC="https://wci.earth2observe.eu/thredds/fileServer/"
+dapLOC="https://wci.earth2observe.eu/thredds/dodsC/"
 
 
 ## defaults, changed via command line 
@@ -107,6 +108,7 @@ else
 fi
 file_path="${Cid}/${Cver}"
 http_path=$httpLOC/${file_path}/
+dap_path=$dapLOC/${file_path}/
 local_path=${datadir}/$file_path/
 temp_path=${datadir}/tmp/
 
@@ -121,7 +123,8 @@ fi
 if [[ $Lcheck_remote = true ]]; then
   wget -q --spider $http_path/${file_in} && LrExist=true || LrExist=false 
   if [[ $LrExist = true ]]; then
-    echo "File: $http_path/${file_in} exist"
+    echo "fileurl: $http_path/${file_in} exist"
+    echo "opendap: $dap_path/${file_in}.html exist"
     exit 0
   else
     echo "File: $http_path/${file_in} does not exist"
