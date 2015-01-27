@@ -9,6 +9,60 @@
 ## for command line options:
 # ./extract_E2OBS_simulations.ksh --man 
 
+# DESCRIPTION
+#    Script to extract e2obs model simulations.
+# 
+# SYNOPSIS
+#   ./extract_E2OBS_simulations.ksh [ options ]
+# 
+#  Returns
+#  0 if no errors found. -9 if remote file is not found. Any other in case of error.
+# 
+#  Output
+#     Output files saved to datadir/Cid/Cver/
+# 
+#  External
+#     Requires wget and nco
+# 
+# OPTIONS
+#   -i, --id=id     Institution identification. Allowed values: ecmwf,univu,metfr,nerc,jrc,cnrs,univk,ambio,csiro,eth. The default value is NONE.
+#   -v, --variable=var
+#                   Variable name. The default value is NONE.
+#   -d, --domain=domain
+#                   Domain. The default value is glob30.
+#   -e, --experiment=ver
+#                   Experiment name. The default value is wrr1.
+#   -f, --frequency=frequency
+#                   Frequency. Allowed values: mon,day,1hr,fix. The default value is day.
+#   -a, --ystart=ystart
+#                   Start year of simulation. The default value is 1979.
+#   -b, --yend=yend End year of simulation. The default value is 2012.
+#   -l, --datadir=datadir
+#                   Base data directory. Temporary files saved to: datadir/tmp/; Output files saved to datadir/Cid/Cver/ . The default value is ./.
+#   -m, --plat=Plat Latitude of point to extract. The default value is -999.
+#   -n, --plon=Plon Longitude of point to extract The default value is -999.
+#   -p, --rname=Creg
+#                   region or point tag name The default value is NONE.
+#   -q, --latmin=latmin
+#                   Latitude South bound The default value is -999.
+#   -r, --latmax=latmax
+#                   Latitude North bound The default value is -999.
+#   -s, --lonmin=lonmin
+#                   Longitude West bound The default value is -999.
+#   -t, --lonmax=lonmax
+#                   Longitude East bound The default value is -999.
+#   -u, --dstart=dstart
+#                   Date start to cut (any format understood by date) The default value is -999.
+#   -g, --dend=dend Date end to cut (any format understood by date) The default value is -999.
+#   -w               be verbose (add set -x)
+#   -y               if used, the temporary file will not be removed
+#   -c               Only check if remove file exists (if remote file exists returns 0, otherwise -9
+# 
+# IMPLEMENTATION
+#   author          Emanuel Dutra <emanuel.dutra@ecmwf.int>
+
+
+
 
 # Script setup---------------------------------------------
 set -eu 
