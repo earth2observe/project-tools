@@ -1,28 +1,30 @@
 # Examples for data access 
 
-** download_E2OBS_Met_forcing_wget.ksh 
+**download_E2OBS_Met_forcing_wget.ksh**
 Example script to download the meteorological forcing 
 
-** check_files.ksh 
+**check_files.ksh**
 Example script to list all the available data in server as a html page 
 
-
-** extract_E2OBS_simulations.ksh
+**extract_E2OBS_simulations.ksh**
 Script to extract / sample E2OB simulation 
-## Examples
+**Examples**
 
-==============================================
-1. # for description of command line options: 
+
+1. for description of command line options: 
+```
 ./extract_E2OBS_simulations.ksh --man 
+```
 
-=====================================
-2. check if a file exists in the dataserver 
+2. check if a file exists in the dataserver
+```
 ./extract_E2OBS_simulations.ksh --id=ecmwf --variable=SWE --frequency=day  -c
 returns 0 if file exists, or -9 if file is not present 
 see "check_files.ksh with an example 
+```
 
-=====================================
 3. extract the montlhy evaporation from all models
+```
 cids="ecmwf univu metfr nerc jrc cnrs univk csiro eth" # list of all institutions
 datadir="./"  # base location to save files 
 for cid in $cids
@@ -32,9 +34,10 @@ do
                       --variable=Evap \
                       --frequency=mon 
 done 
+```
 
-=====================================
 4. extract the daily evaporation for a list of lat/lon points for ecmwf simulation
+```
 set -A rname  reading  paris  lasvegas
 set -A plat   51.5     49.0     36.0 
 set -A plon   0.5      2.1    -245.0
@@ -55,9 +58,10 @@ do
                       --rname=${rname[ikp]} 
   ikp=$(( $ikp + 1 ))
 done
+```
 
-=====================================
 5. extract the monthly evaporation for a region 
+```
 ./extract_E2OBS_simulations.ksh --datadir=$datadir \
                     --id=ecmwf \
                     --variable=Evap \
@@ -67,9 +71,10 @@ done
                     --lonmin=-11. \
                     --lonmax=35. \
                     --rname=europe
-                  
-=======================================
-6. extract the daily evaporation for a region for the period 2001-01-03 to 2003-03-15  
+```                  
+
+6. extract the daily evaporation for a region for the period 2001-01-03 to 2003-03-15
+```
 ./extract_E2OBS_simulations.ksh --datadir=$datadir -y -w \
                     --id=ecmwf \
                     --variable=Evap \
@@ -81,6 +86,6 @@ done
                     --dstart=20010103 \
                     --dend=20030315 \
                     --rname=europe-myperiod
-
+```
 
 
