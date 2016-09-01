@@ -159,7 +159,11 @@ if [[ $Cfreq = "fix" ]]; then  # special case for fix fields
   file_in="e2o_${Cid}_${Cver}_${Cdomain}_${Cfreq}_${Cvar}.nc"
 else
   file_in="e2o_${Cid}_${Cver}_${Cdomain}_${Cfreq}_${Cvar}_${Cystart}-${Cyend}.nc"
+#  if [[ ${Cid} = "cnrs" ]]; then
+#    file_in="e2o_${Cid}_${Cver}_${Cdomain}_${Cfreq}_${Cvar}_${Cystart}_${Cyend}.nc"
+#  fi
 fi
+
 file_path="${Cid}/${Cver}"
 http_path=$httpLOC/${file_path}/
 dap_path=$dapLOC/${file_path}/
@@ -168,7 +172,15 @@ temp_path=${datadir}/tmp/
 
 # special case of univu data location on the server
 if [[ $Cid = univu ]]; then
-  http_path=$httpLOC/uu/wrr1/
+  http_path=$httpLOC/uu/${Cver}/
+  dap_path=$dapLOC/uu/${Cver}/
+fi
+if [[ $Cid = nerc ]]; then
+  http_path=$httpLOC/ceh/${Cver}/
+  dap_path=$dapLOC/ceh/${Cver}/
+fi
+if [[ $Cid = jrchbv ]]; then
+  http_path=$httpLOC/jrc/wrr1-hbv/
 fi
 
 
@@ -205,25 +217,6 @@ fi
 mkdir -p $local_path/
 mkdir -p $temp_path
 
-## Get file to temp path
-if [[ $LtExist = false ]]; then
-  if [[ $LlExist = true ]]; then
-    cp $local_path/${file_in} $temp_path/${file_in} 
-    echo "file copied from local path"
-  else
-    wget -q --spider $http_path/${file_in} && LrExist=true || LrExist=false 
-    if [[ $LrExist = true ]]; then
-      wget -O $temp_path/${file_in}  $http_path/${file_in} 
-      echo "file copied from remote server"
-    else
-      echo "Cannot find file locally or in remote server!"
-      exit -9 
-    fi
-  fi
-else
-   echo "file already available on local path"
-fi 
-
 Lpost=false # indicate if we need to do any post-processing ?
 nco_pp=""
 if [[ $Plat != -999 ]]; then
@@ -248,9 +241,36 @@ if [[ $dstart != -999 || $dend != -999 ]]; then
 fi 
 
 
-if [[ $Lpost = false ]]; then
-  cp $temp_path/${file_in} $local_path/${file_in}
+## Get file to temp path
+if [[ $LtExist = false ]]; then
+  if [[ $LlExist = true ]]; then
+    if [[ $Lpost = false ]]; then
+      echo "Nothing to do"
+     else
+      cp $local_path/${file_in} $temp_path/${file_in} 
+      echo "file copied from local path"
+     fi
+  else
+    wget -q --spider $http_path/${file_in} && LrExist=true || LrExist=false 
+    if [[ $LrExist = true ]]; then
+      if [[ $Lpost = false ]]; then
+        final_loc=$local_path/${file_in}
+      else
+        final_loc=$temp_path/${file_in}
+      fi
+      wget -O ${final_loc}  $http_path/${file_in} 
+      echo "file copied from remote server"
+    else
+      echo "Cannot find file locally or in remote server!"
+      exit -9 
+    fi
+  fi
 else
+   echo "file already available on local path"
+fi 
+
+# do post-processing if required 
+if [[ $Lpost = true ]]; then
   if [[ $Creg = NONE ]]; then
     echo "Creg (--rname) must be provided"
     exit -1

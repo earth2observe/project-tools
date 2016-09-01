@@ -13,8 +13,6 @@ import numpy as np
 import traceback
 import datetime as dt
 
-#import matplotlib.pyplot as plt
-
 ### specific
 import e2obs_utils as e2oU
 
@@ -107,8 +105,10 @@ def check_variable_consistency(finput,msg=None):
   nc = Dataset(finput.fpath,'r')
 
   ## general check 
+  for cvtime in nc.variables.keys():
+    if cvtime in ['time','time_counter']: break
   emsg=0
-  for cvar in ['lat','lon','time',finput.cvar]:
+  for cvar in ['lat','lon',cvtime,finput.cvar]:
     for att in ['long_name','units','_FillValue','comment']:
       if att ==  '_FillValue' and cvar != finput.cvar : continue
       if att ==  'comment' and cvar not in ['SurfMoist','RootMoist'] : continue
@@ -158,10 +158,17 @@ def check_file_coords(finput,msg=None):
   else:
     print "This frequency test is not implemented yet",finput.cfreq
     sys.exit(-1)
-    
+  
+  for cvtime in nc.variables.keys():
+    if cvtime in ['time','time_counter']: break
   if finput.cfreq != "fix":
     vYR,vMON,vDAY = date2yrmonday(vTIME)
-    fTIME = num2date(nc.variables['time'][:],nc.variables['time'].units)
+    if tcheck:
+      fTIME = num2date(nc.variables[cvtime][:],nc.variables[cvtime].units)
+    else:
+      fTIME=vTIME
+      fTIME[0] = num2date(nc.variables[cvtime][0],nc.variables[cvtime].units)
+      fTIME[-1] = num2date(nc.variables[cvtime][-1],nc.variables[cvtime].units)
     fYR,fMON,fDAY = date2yrmonday(fTIME)
 
   fLAT = nc.variables['lat'][:]
@@ -271,7 +278,6 @@ def check_wb(cf,ystart,yend,cdomain,cid,cver,msg=None):
 
   grid_area = e2oU.load_grid_area(fgarea)
   cvarsWB=['Precip','Runoff','Evap','Stor','NET']
-  #cvarsWB=['Precip','Runoff','Evap','NET']
   if msg is None:
     msg=e2oU.init_msg()
 
@@ -288,7 +294,8 @@ def check_wb(cf,ystart,yend,cdomain,cid,cver,msg=None):
         venB[cvar] = venB[cvar] + venB[cc]
     elif cvar == "Stor":
       venB[cvar] = np.zeros((nlat,nlon))
-      for svar in ['TotMoist','SWE','CanopInt']:
+      for svar in ['TotMoist','SWE','CanopInt','SurfStor']:
+        print 'WB, loading:',svar
         cf = cf.attr2fpath(cfreq='day',cvar=svar,cdomain=cdomain,cid=cid,cver=cver)
         xdata,xtime = e2oU.load_nc_var(cf.fpath,cf.cvar,tinD=tinD)
         if xdata is None:
@@ -304,7 +311,7 @@ def check_wb(cf,ystart,yend,cdomain,cid,cver,msg=None):
         msg['Wmsg'].append("WB: Could not find variable: '%s', setting to zero!'"%(cvar))
       else:
         venB[cvar] = np.mean(xdata,0)
-      venB[cvar] = venB[cvar]*86400.
+      venB[cvar] = venB[cvar]*86400. 
     globM[cvar] = compute_area_mean(venB[cvar],grid_area)
 
   for cvar in cvarsWB:
@@ -316,16 +323,21 @@ def check_wb(cf,ystart,yend,cdomain,cid,cver,msg=None):
       if np.sum(np.abs(venB[cvar])>5e-6*86400.) > 0:
         msg['Wmsg'].append('WB:'+" variable %s with gpmin %e, gpmax %e fldmean %e #gp>thr %i"%
                       (cvar,np.min(venB[cvar]),np.max(venB[cvar]),globM[cvar],np.sum(np.abs(venB[cvar])>5e-6*86400.)))
-    #plt.figure()
-    #plt.pcolormesh(vLON,vLAT,venB[cvar]);plt.colorbar()   # for plotting
-    #plt.title(cvar)
+    
+    # produce map with WB residuals
+    # requires plot_utils from pyutils
     #if (cvar == "NET"):
-      #plt.figure()
-      #xx = venB[cvar]
-      #xx[np.abs(venB[cvar])<5e-6*86400.] = 0
-      #plt.pcolormesh(vLON,vLAT,venB[cvar]);plt.colorbar()   # for plotting
-      #plt.title(cvar+' 0 == ok') 
-  #plt.show()
+      #from pyutils import plot_utils as pu
+      #import matplotlib.pyplot as plt
+
+      #opts={}
+      #opts['Clevels']=np.arange(-2,2.5,0.5)*86400*5e-6
+      #opts['cmap']=plt.cm.get_cmap('RdBu')
+      #fig=pu.plot_map(vLON,vLAT,venB[cvar],titleC='WB residual',titleL=cf.cid,contourf=False,
+                      #titleR="%i #gp"%np.sum(np.abs(venB[cvar])>5e-6*86400.),Clabel='[mm/day]',**opts)
+      #fig[0].savefig('map_wb_res_%s_%s_%s_%i_%i.png'%(cf.cid,cf.cver,cf.cdomain,cf.ystart,cf.yend),bbox_inches="tight",dpi=200)
+      #plt.close(fig[0])
+      
   return msg 
 
 def read_args():
@@ -353,6 +365,8 @@ def read_args():
                       help='institution id')
   parser.add_argument('-v',dest='cver',default="wrr1",type=str,metavar='cver',
                       help='simulations version')
+  parser.add_argument('-t',dest='tcheck',default=False,action='store_true',
+                      help='if present check all timesteps (slow), otherwise only 1st and last step')
   args =  parser.parse_args()
   return args 
 
@@ -373,9 +387,10 @@ yend=args.yend          #2012  end year
 cdomain=args.cdomain       #"glob30"  simulations domain
 cid=args.cid           #"ecmwf"  institution id 
 cver=args.cver          #"wrr1"    simulations version id 
+tcheck=args.tcheck
 
 print args
-
+#sys.exit()
 ##=======================================================
 ## 1. File consistency checks: we loop on all possible variables:
 msg=e2oU.init_msg() # intialize message dictionary 
@@ -424,12 +439,12 @@ except:
 ##===========================================
 ## 3. Water balance
 cf = e2oU.fname()
-try:
-  cf=cf.attr2fpath(base=fbase,cfreq='mon',cvar='Precip',cdomain=cdomain,
-                     ystart=ystart,yend=yend,cid=cid,cver=cver)
-  msg = check_wb(cf,ystart,yend,cdomain,cid,cver,msg)
-except:
-  msg['Wmsg'].append('cannot find Precip file: Water balance cannot be checked' )
+#try:
+cf=cf.attr2fpath(base=fbase,cfreq='mon',cvar='Precip',cdomain=cdomain,
+                   ystart=ystart,yend=yend,cid=cid,cver=cver)
+msg = check_wb(cf,ystart,yend,cdomain,cid,cver,msg)
+#except:
+  #msg['Wmsg'].append('cannot find Precip file: Water balance cannot be checked' )
 
 #===========================================
 #4. save message to output:

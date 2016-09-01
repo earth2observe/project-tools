@@ -16,7 +16,7 @@ import numpy as np
 validD={}
 validD['cid']=['ecmwf','univu','metfr','nerc','jrc','cnrs','univk','ambio','csiro','eth']
 validD['cver']=['wrr1','wrr2','wrr1-exp1']
-validD['cdomain']=['glob30','glob06','eumed30']
+validD['cdomain']=['glob30','glob06','eumed30','glob15']
 validD['cfreq']=['day','mon','1hr','fix']
 validD['cvar']=['Precip','Evap','Runoff','Rainf','Qs','Qsb','Qrec','Qsm','PotEvap',
                 'ECanop','TVeg','ESoil','EWater','RivOut','Dis','SWnet','LWnet','Qle','Qh',
@@ -44,6 +44,9 @@ def default_latlon(domain):
   if domain == "glob30":
     vLON = np.linspace(-179.75,179.75,720)
     vLAT = np.linspace(-89.75,89.75,360)
+  if domain == "glob15":
+    vLON = np.linspace(-179.875,179.875,1440)
+    vLAT = np.linspace(-89.875,89.875,720)
   else:
     print domain," lat/lon coordinates not coded in default_latlon!"
     sys.exit(-1)
@@ -75,7 +78,9 @@ def load_nc_var(ffile,cvar,dstart=None,dend=None,tinD=None):
 
   nc = Dataset(ffile,'r')
   try:
-    xtime = num2date(nc.variables['time'][:],getattr(nc.variables['time'],'units'))
+    for cvtime in nc.variables.keys():
+      if cvtime in ['time','time_counter']: break
+    xtime = num2date(nc.variables[cvtime][:],getattr(nc.variables[cvtime],'units'))
   except:
     print ffile,'\n Could not check time information, check time variable and units attributes'
     nc.close()

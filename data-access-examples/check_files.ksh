@@ -6,9 +6,9 @@
 set -u
 
 ids="ecmwf univu metfr nerc jrc cnrs univk csiro eth"
-cvars="Precip Evap Runoff Rainf Qs Qsb Qrec Qsm PotEvap ECanop TVeg ESoil EWater "
-cvars+="RivOut Dis SWnet LWnet Qle Qh AvgSurfT Albedo LAI SWE CanopInt SWEVeg SurfStor "
-cvars+="WaterTableD SnowFrac SnowDepth SurfMoist RootMoist TotMoist GroundMoist "
+cvars="Precip Evap Runoff SWE SurfMoist RootMoist TotMoist Rainf Qs Qsb Qrec Qsm PotEvap ECanop TVeg ESoil EWater "
+cvars+="RivOut Dis SWnet LWnet Qle Qh AvgSurfT Albedo LAI  CanopInt SWEVeg SurfStor "
+cvars+="WaterTableD SnowFrac SnowDepth  GroundMoist "
 cvars+="lsm SurfSoilSat RootSoilSat TotSoilSat"
 
 freq0="day"
