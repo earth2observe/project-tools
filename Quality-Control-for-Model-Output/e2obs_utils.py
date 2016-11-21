@@ -15,7 +15,7 @@ import numpy as np
 ## list of allowed identifiers:
 validD={}
 validD['cid']=['ecmwf','univu','metfr','nerc','jrc','cnrs','univk','ambio','csiro','eth']
-validD['cver']=['wrr1','wrr2','wrr1-exp1']
+validD['cver']=['wrr1','wrr1-exp1','wrr2','wrr2trmm','wrr2gsmap','wrr2trmmrt','wrr2cmorph','wrr2da']
 validD['cdomain']=['glob30','glob06','eumed30','glob15']
 validD['cfreq']=['day','mon','1hr','fix']
 validD['cvar']=['Precip','Evap','Runoff','Rainf','Qs','Qsb','Qrec','Qsm','PotEvap',
@@ -23,8 +23,8 @@ validD['cvar']=['Precip','Evap','Runoff','Rainf','Qs','Qsb','Qrec','Qsm','PotEva
                 'AvgSurfT','Albedo','LAI','SWE','CanopInt','SWEVeg','SurfStor','WaterTableD',
                 'SnowFrac','SnowDepth','SurfMoist','RootMoist','TotMoist','GroundMoist',
                 'lsm','SurfSoilSat','RootSoilSat','TotSoilSat']
-validD['ystart']=range(1979,2013)
-validD['yend']=range(1979,2013)
+validD['ystart']=range(1979,2015)
+validD['yend']=range(1979,2015)
 validD['cvar_fix']=['lsm','SurfSoilSat','RootSoilSat','TotSoilSat']
 
 

@@ -252,6 +252,24 @@ def check_eb(cf,ystart,yend,cdomain,cid,cver,msg=None):
   for cvar in cvarsEB:
     msg['Dmsg'].append("EB: Global mean of %s %f (W m-2) with %s/%s %f"%
                           (cvar,globM[cvar],cvar,cvarsEB[0],globM[cvar]/globM[cvarsEB[0]]))
+
+  if LPLOT:
+    #produce map with EB residuals
+    #requires plot_utils from pyutils # ask Edutra 
+    from pyutils import plot_utils as pu
+    import matplotlib.pyplot as plt
+
+    opts={}
+    opts['Clevels']=np.linspace(-2,2,10)
+    opts['cmap']=plt.cm.get_cmap('RdBu')
+
+    fig=pu.plot_map(vLON,vLAT,venB['NET'],titleC='EB residual',titleL=cf.cid,contourf=False,
+                    Clabel='[W m-2]',**opts)
+    fout='map_eb_res_%s_%s_%s_%i_%i.png'%(cf.cid,cf.cver,cf.cdomain,cf.ystart,cf.yend)
+    print "Saving:",fout
+    fig[0].savefig(fout,bbox_inches="tight",dpi=200)
+    plt.close(fig[0])
+    
   return msg 
 
 def check_wb(cf,ystart,yend,cdomain,cid,cver,msg=None):
@@ -324,19 +342,22 @@ def check_wb(cf,ystart,yend,cdomain,cid,cver,msg=None):
         msg['Wmsg'].append('WB:'+" variable %s with gpmin %e, gpmax %e fldmean %e #gp>thr %i"%
                       (cvar,np.min(venB[cvar]),np.max(venB[cvar]),globM[cvar],np.sum(np.abs(venB[cvar])>5e-6*86400.)))
     
-    # produce map with WB residuals
-    # requires plot_utils from pyutils
-    #if (cvar == "NET"):
-      #from pyutils import plot_utils as pu
-      #import matplotlib.pyplot as plt
+    if LPLOT:
+    #produce map with WB residuals
+    #requires plot_utils from pyutils
+      if (cvar == "NET"):
+        from pyutils import plot_utils as pu
+        import matplotlib.pyplot as plt
 
-      #opts={}
-      #opts['Clevels']=np.arange(-2,2.5,0.5)*86400*5e-6
-      #opts['cmap']=plt.cm.get_cmap('RdBu')
-      #fig=pu.plot_map(vLON,vLAT,venB[cvar],titleC='WB residual',titleL=cf.cid,contourf=False,
-                      #titleR="%i #gp"%np.sum(np.abs(venB[cvar])>5e-6*86400.),Clabel='[mm/day]',**opts)
-      #fig[0].savefig('map_wb_res_%s_%s_%s_%i_%i.png'%(cf.cid,cf.cver,cf.cdomain,cf.ystart,cf.yend),bbox_inches="tight",dpi=200)
-      #plt.close(fig[0])
+        opts={}
+        opts['Clevels']=np.arange(-2,2.5,0.5)*86400*5e-6
+        opts['cmap']=plt.cm.get_cmap('RdBu')
+        fig=pu.plot_map(vLON,vLAT,venB[cvar],titleC='WB residual',titleL=cf.cid,contourf=False,
+                        titleR="%i #gp"%np.sum(np.abs(venB[cvar])>5e-6*86400.),Clabel='[mm/day]',**opts)
+        fout='map_wb_res_%s_%s_%s_%i_%i.png'%(cf.cid,cf.cver,cf.cdomain,cf.ystart,cf.yend)
+        print "Saving:",fout
+        fig[0].savefig(fout,bbox_inches="tight",dpi=200)
+        plt.close(fig[0])
       
   return msg 
 
@@ -367,6 +388,11 @@ def read_args():
                       help='simulations version')
   parser.add_argument('-t',dest='tcheck',default=False,action='store_true',
                       help='if present check all timesteps (slow), otherwise only 1st and last step')
+  parser.add_argument('-s',dest='LSPLIT',default=False,action='store_true',
+                      help='if present daily files are split')
+  parser.add_argument('-p',dest='LPLOT',default=False,action='store_true',
+                      help='if present generate maps with residuals')
+  
   args =  parser.parse_args()
   return args 
 
@@ -388,9 +414,10 @@ cdomain=args.cdomain       #"glob30"  simulations domain
 cid=args.cid           #"ecmwf"  institution id 
 cver=args.cver          #"wrr1"    simulations version id 
 tcheck=args.tcheck
-
+LPLOT=args.LPLOT
+LSPLIT=args.LSPLIT
 print args
-#sys.exit()
+
 ##=======================================================
 ## 1. File consistency checks: we loop on all possible variables:
 msg=e2oU.init_msg() # intialize message dictionary 
@@ -403,31 +430,37 @@ for cvar in e2oU.validD['cvar']:
       continue
     if cvar in e2oU.validD['cvar_fix'] and cfreq != 'fix':
       continue
-    cf=cf.attr2fpath(base=fbase,cfreq=cfreq,cvar=cvar,cdomain=cdomain,
-                     ystart=ystart,yend=yend,cid=cid,cver=cver)
-    print "checking:", cf.fpath
-
-
-    # 1.1 :check if file can be opened ! 
-    try:
-      nc = Dataset(cf.fpath,'r')
-    except:
-      msg['Wmsg'].append(cf.fname+': cannot open netcdf file' )
-      continue
-    nc.close()
     
-    ## 1.2 : check that file name is consistent (should be !)
-    check_fname_consistency(cf,e2oU.validD,msg)
+    if LSPLIT and (cfreq == 'day') : 
+      ddyears=zip([1980,1990,2000],[1989,1999,2014])
+    else:
+      ddyears=zip([ystart,],[yend,])
 
-    # 1.3 : Check if the variable attributes are ok
-    check_variable_consistency(cf,msg)
-    
-    # 1.4 : check the coordinate attributes 
-    check_file_coords(cf,msg)
+    for ystart1,yend1 in ddyears:
+      cf=cf.attr2fpath(base=fbase,cfreq=cfreq,cvar=cvar,cdomain=cdomain,
+                      ystart=ystart1,yend=yend1,cid=cid,cver=cver)
+      print "checking:", cf.fpath
+
+
+      # 1.1 :check if file can be opened ! 
+      try:
+        nc = Dataset(cf.fpath,'r')
+      except:
+        msg['Wmsg'].append(cf.fname+': cannot open netcdf file' )
+        continue
+      nc.close()
+      
+      ## 1.2 : check that file name is consistent (should be !)
+      check_fname_consistency(cf,e2oU.validD,msg)
+
+      # 1.3 : Check if the variable attributes are ok
+      check_variable_consistency(cf,msg)
+      
+      # 1.4 : check the coordinate attributes 
+      check_file_coords(cf,msg)
 
 ##===========================================
 ## 2. Energy check 
-cf = e2oU.fname()
 try:
   cf=cf.attr2fpath(base=fbase,cfreq='mon',cvar='SWnet',cdomain=cdomain,
                      ystart=ystart,yend=yend,cid=cid,cver=cver)
