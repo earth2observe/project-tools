@@ -5,14 +5,30 @@
 
 set -u
 
+ver=$1 #"wrr1" 
+freq0=$2 #"mon"
+
+
 ids="ecmwf univu metfr nerc jrc cnrs univk csiro eth"
 cvars="Precip Evap Runoff SWE SurfMoist RootMoist TotMoist Rainf Qs Qsb Qrec Qsm PotEvap ECanop TVeg ESoil EWater "
 cvars+="RivOut Dis SWnet LWnet Qle Qh AvgSurfT Albedo LAI  CanopInt SWEVeg SurfStor "
 cvars+="WaterTableD SnowFrac SnowDepth  GroundMoist "
 cvars+="lsm SurfSoilSat RootSoilSat TotSoilSat"
 
-freq0="day"
-fout=e2o_resume_${freq0}_$(date +"%Y-%m-%d").html # output html file 
+# cvars="Evap"
+ 
+if [[ $ver = "wrr1" ]];then
+  ystart=1979
+  yend=2012
+  domain=glob30
+  ids="ecmwf univu metfr nerc jrc cnrs univk csiro eth"
+elif [[ $ver = "wrr2" ]];then
+  ystart=1980
+  yend=1989
+  domain=glob15
+  ids="ecmwf univu metfr nerc jrc cnrs univk anu"
+fi
+fout=e2o_resume_${ver}_${freq0}_${ystart}${yend}_$(date +"%Y-%m-%d").html # output html file 
 
 echo "<html>
 <head> 
@@ -38,7 +54,7 @@ do
      lsm|SurfSoilSat|RootSoilSat|TotSoilSat) freq="fix";;
     esac
      Lexist=true
-    ./extract_E2OBS_simulations.ksh --id $cid --variable $cvar --frequency $freq -c 1>out_extract 2>&1 || Lexist=false
+    ./extract_E2OBS_simulations.ksh -e $ver --id $cid --variable $cvar --frequency $freq --ystart $ystart --yend $yend -d $domain -c 1>out_extract 2>&1 || Lexist=false
     echo $cid $cvar $Lexist
     if [[ $Lexist = true ]]; then
       url=$( cat out_extract | grep "fileurl" | awk '{print $2}' )
@@ -46,6 +62,7 @@ do
       echo "<td><a href=\"$url\">url</a>,<a href=\"$dap\">dap</a></td>" >> $fout
     else
       echo "<td><b>NA</b></td>" >> $fout
+#       cat out_extract
     fi
     rm -f out_extract
   done

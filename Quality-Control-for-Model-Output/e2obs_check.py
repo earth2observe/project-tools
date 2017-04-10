@@ -390,6 +390,8 @@ def read_args():
                       help='if present check all timesteps (slow), otherwise only 1st and last step')
   parser.add_argument('-s',dest='LSPLIT',default=False,action='store_true',
                       help='if present daily files are split')
+  parser.add_argument('-cwe',dest='CHECK_WATER_ENERGY',default=False,action='store_true',
+                      help='if present check for water and energy balance')
   parser.add_argument('-p',dest='LPLOT',default=False,action='store_true',
                       help='if present generate maps with residuals')
   
@@ -416,6 +418,7 @@ cver=args.cver          #"wrr1"    simulations version id
 tcheck=args.tcheck
 LPLOT=args.LPLOT
 LSPLIT=args.LSPLIT
+CHECK_WATER_ENERGY=args.CHECK_WATER_ENERGY
 print args
 
 ##=======================================================
@@ -461,23 +464,24 @@ for cvar in e2oU.validD['cvar']:
 
 ##===========================================
 ## 2. Energy check 
-try:
-  cf=cf.attr2fpath(base=fbase,cfreq='mon',cvar='SWnet',cdomain=cdomain,
-                     ystart=ystart,yend=yend,cid=cid,cver=cver)
-  msg = check_eb(cf,ystart,yend,cdomain,cid,cver,msg)
-except:
-  msg['Wmsg'].append('cannot find SWnet file: energy balance cannot be checked' )
+if CHECK_WATER_ENERGY:
+  try:
+    cf=cf.attr2fpath(base=fbase,cfreq='mon',cvar='SWnet',cdomain=cdomain,
+                      ystart=ystart,yend=yend,cid=cid,cver=cver)
+    msg = check_eb(cf,ystart,yend,cdomain,cid,cver,msg)
+  except:
+    msg['Wmsg'].append('cannot find SWnet file: energy balance cannot be checked' )
 
 
-##===========================================
-## 3. Water balance
-cf = e2oU.fname()
-#try:
-cf=cf.attr2fpath(base=fbase,cfreq='mon',cvar='Precip',cdomain=cdomain,
-                   ystart=ystart,yend=yend,cid=cid,cver=cver)
-msg = check_wb(cf,ystart,yend,cdomain,cid,cver,msg)
-#except:
-  #msg['Wmsg'].append('cannot find Precip file: Water balance cannot be checked' )
+  ##===========================================
+  ## 3. Water balance
+  cf = e2oU.fname()
+  #try:
+  cf=cf.attr2fpath(base=fbase,cfreq='mon',cvar='Precip',cdomain=cdomain,
+                    ystart=ystart,yend=yend,cid=cid,cver=cver)
+  msg = check_wb(cf,ystart,yend,cdomain,cid,cver,msg)
+  #except:
+    #msg['Wmsg'].append('cannot find Precip file: Water balance cannot be checked' )
 
 #===========================================
 #4. save message to output:
